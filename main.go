@@ -31,6 +31,7 @@ func main() {
 	router.GET("/auth", middlewares.Auth(), controllers.Home)
 	router.POST("/auth/register", UserController.RegisterUser)
 	router.POST("/auth/login", UserController.LoginUser)
+	router.GET("/api/users/:id", middlewares.Auth(), UserController.GetUserById)
 
 	router.Run(":" + os.Getenv("PORT"))
 }

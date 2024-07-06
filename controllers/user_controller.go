@@ -3,6 +3,7 @@ package controllers
 import (
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/codelikesuraj/hng11-task-two/models"
 	"github.com/codelikesuraj/hng11-task-two/utils"
@@ -60,15 +61,18 @@ func (uc *UserController) RegisterUser(c *gin.Context) {
 		return
 	}
 
-	newUser := models.User{
-		FirstName: user.FirstName,
-		LastName:  user.LastName,
-		Email:     user.Email,
-		Password:  passwordHash,
-		Phone:     user.Phone,
+	newOrganisation := models.Organisation{
+		Name: user.FirstName + "'s Organisation",
+		User: models.User{
+			FirstName: user.FirstName,
+			LastName:  user.LastName,
+			Email:     user.Email,
+			Password:  passwordHash,
+			Phone:     user.Phone,
+		},
 	}
 
-	if err = uc.DB.Create(&newUser).Error; err != nil {
+	if err = uc.DB.Create(&newOrganisation).Error; err != nil {
 		log.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":     http.StatusText(http.StatusInternalServerError),
@@ -77,6 +81,8 @@ func (uc *UserController) RegisterUser(c *gin.Context) {
 		})
 		return
 	}
+
+	newUser := newOrganisation.User
 
 	token, err := utils.GenerateJWT(newUser)
 	if err != nil {
@@ -167,5 +173,36 @@ func (uc *UserController) LoginUser(c *gin.Context) {
 			"accessToken": token,
 			"users":       models.UserResponse(user),
 		},
+	})
+}
+
+func (uc *UserController) GetUserById(c *gin.Context) {
+	userId, _ := strconv.Atoi(c.Param("id"))
+	if userId < 1 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"status":     http.StatusText(http.StatusNotFound),
+			"message":    "user not found",
+			"statusCode": http.StatusNotFound,
+		})
+		return
+	}
+
+	var user models.User
+	user.ID = uint(userId)
+
+	result := uc.DB.Limit(1).Find(&user)
+	if result.RowsAffected != 1 || result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"status":     http.StatusText(http.StatusNotFound),
+			"message":    "user not found",
+			"statusCode": http.StatusNotFound,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "user found",
+		"data":    models.UserResponse(user),
 	})
 }
