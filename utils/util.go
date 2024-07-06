@@ -1,11 +1,15 @@
 package utils
 
 import (
+	"errors"
 	"log"
 	"os"
 	"reflect"
+	"time"
 
+	"github.com/codelikesuraj/hng11-task-two/models"
 	"github.com/go-playground/validator/v10"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
@@ -74,4 +78,36 @@ func LoadEnvs() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+}
+
+func GenerateJWT(user models.User) (string, error) {
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"id":   user.ID,
+		"user": models.UserResponse(user),
+		"exp":  time.Now().Add(time.Hour * 24).Unix(),
+	}).SignedString([]byte(os.Getenv("JWT_SECRET")))
+}
+
+func CheckJWT(tokenString string) error {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// check signing method
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("invalid siging method")
+		}
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	})
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+
+	// check token validity
+	if !ok || !token.Valid || err != nil {
+		return errors.New("invalid token")
+	}
+
+	// check expiry
+	if float64(time.Now().Unix()) > claims["exp"].(float64) {
+		return errors.New("expired token")
+	}
+
+	return nil
 }

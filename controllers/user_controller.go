@@ -78,11 +78,22 @@ func (uc *UserController) RegisterUser(c *gin.Context) {
 		return
 	}
 
+	token, err := utils.GenerateJWT(newUser)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":     http.StatusText(http.StatusInternalServerError),
+			"message":    err.Error(),
+			"statusCode": http.StatusInternalServerError,
+		})
+		return
+	}
+
 	c.JSON(http.StatusCreated, gin.H{
 		"status":  "success",
 		"message": "registration successful",
 		"data": gin.H{
-			"accessToken": "<access_token>",
+			"accessToken": token,
 			"user":        models.UserResponse(newUser),
 		},
 	})
@@ -138,11 +149,22 @@ func (uc *UserController) LoginUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
+	token, err := utils.GenerateJWT(user)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":     http.StatusText(http.StatusInternalServerError),
+			"message":    err.Error(),
+			"statusCode": http.StatusInternalServerError,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "login successful",
 		"data": gin.H{
-			"accessToken": "<access_token>",
+			"accessToken": token,
 			"users":       models.UserResponse(user),
 		},
 	})

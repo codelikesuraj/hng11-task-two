@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/codelikesuraj/hng11-task-two/controllers"
+	"github.com/codelikesuraj/hng11-task-two/middlewares"
 	"github.com/codelikesuraj/hng11-task-two/models"
 	"github.com/codelikesuraj/hng11-task-two/utils"
 	"github.com/gin-gonic/gin"
@@ -27,6 +28,7 @@ func main() {
 	UserController := controllers.NewUserController(db)
 
 	router.GET("/", controllers.Home)
+	router.GET("/auth", middlewares.Auth(), controllers.Home)
 	router.POST("/auth/register", UserController.RegisterUser)
 	router.POST("/auth/login", UserController.LoginUser)
 
