@@ -36,6 +36,7 @@ func main() {
 		GET("/users/:id", UserController.GetUserById).
 		GET("/organisations/:orgId", OrganisationController.GetOrganisationById).
 		GET("/organisations", OrganisationController.GetAll).
-		POST("/organisations", OrganisationController.Create)
+		POST("/organisations", OrganisationController.Create).
+		POST("/organisations/:orgId/users", OrganisationController.AddUser)
 	router.Run(":" + os.Getenv("PORT"))
 }

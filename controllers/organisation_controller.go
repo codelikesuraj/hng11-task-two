@@ -214,3 +214,116 @@ func (oc *OrganisationController) GetOrganisationById(c *gin.Context) {
 		},
 	})
 }
+
+func (oc *OrganisationController) AddUser(c *gin.Context) {
+	// validate userID parameter
+	var addUser models.OrganisationUserParams
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	if err := c.ShouldBind(&addUser); err != nil {
+		log.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":     http.StatusText(http.StatusInternalServerError),
+			"message":    err.Error(),
+			"statusCode": http.StatusInternalServerError,
+		})
+		return
+	}
+
+	if err := validate.Struct(addUser); err != nil {
+		ve := err.(validator.ValidationErrors)
+		errors := make([]models.InputError, len(ve))
+		for i, fe := range ve {
+			log.Println(fe)
+			errors[i] = models.InputError{
+				Field:   utils.GetJSONTagValue(addUser, fe.Field()),
+				Message: utils.GetValidationMessage(fe),
+			}
+		}
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"errors": errors,
+		})
+		return
+	}
+
+	// check if userId exists
+	var newUser models.User
+	result := oc.DB.Limit(1).Find(&newUser, addUser.UserID)
+	if result.RowsAffected < 1 || result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"status":     http.StatusText(http.StatusNotFound),
+			"message":    "user not found",
+			"statusCode": http.StatusNotFound,
+		})
+		return
+	}
+
+	// get orgId
+	orgId, _ := strconv.Atoi(c.Param("orgId"))
+	if orgId < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":     http.StatusText(http.StatusBadRequest),
+			"message":    "invalid organisation ID",
+			"statusCode": http.StatusBadRequest,
+		})
+		return
+	}
+	var org models.Organisation
+	result = oc.DB.Limit(1).Find(&org, orgId)
+	if result.RowsAffected < 1 || result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"status":     http.StatusText(http.StatusNotFound),
+			"message":    "organisation not found",
+			"statusCode": http.StatusNotFound,
+		})
+		return
+	}
+
+	// get authUser
+	tokenString, _ := utils.GetJWTFromRequest(c)
+	userFromJWT, err := utils.GetUserFromJWT(tokenString)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"status":     http.StatusText(http.StatusUnauthorized),
+			"message":    http.StatusText(http.StatusUnauthorized),
+			"statusCode": http.StatusUnauthorized,
+		})
+		return
+	}
+
+	var authUser models.User
+
+	result = oc.DB.Limit(1).Find(&authUser, userFromJWT["userId"])
+	if result.RowsAffected < 1 || result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"status":     http.StatusText(http.StatusNotFound),
+			"message":    "user not found",
+			"statusCode": http.StatusNotFound,
+		})
+		return
+	}
+
+	// check if auth user has access to organisation
+	if oc.DB.Model(&authUser).Where("id = ?", org.ID).Association("Organisations").Count() < 1 {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"status":     http.StatusText(http.StatusUnauthorized),
+			"message":    "user cannot access organisation",
+			"statusCode": http.StatusUnauthorized,
+		})
+		return
+	}
+
+	// add user to org
+	if err := oc.DB.Model(&org).Association("Users").Append(&newUser); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":     http.StatusText(http.StatusInternalServerError),
+			"message":    "error adding user to organisation",
+			"statusCode": http.StatusInternalServerError,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "User added to organisation successfully",
+	})
+}

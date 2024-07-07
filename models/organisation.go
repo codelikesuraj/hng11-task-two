@@ -20,6 +20,10 @@ type OrganisationCreateParams struct {
 	Description string `json:"description" validate:"omitempty,alpha,min=2,max=32"`
 }
 
+type OrganisationUserParams struct {
+	UserID string `json:"userId" validate:"required"`
+}
+
 func OrganisationsResponse(organisations []Organisation) []map[string]string {
 	orgs := []map[string]string{}
 
