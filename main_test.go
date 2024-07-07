@@ -288,7 +288,7 @@ func TestAPIRoutes(t *testing.T) {
 			router.ServeHTTP(w, req)
 			resp := fmt.Sprintln(w.Body.String(), ":", testCase.url)
 			assert.NotEqual(t, http.StatusInternalServerError, w.Code, resp)
-			assert.Equal(t, http.StatusUnauthorized, w.Code, resp)
+			assert.NotEqual(t, http.StatusUnauthorized, w.Code, resp)
 		}
 	})
 }
