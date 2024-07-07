@@ -17,6 +17,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
 
@@ -107,6 +108,34 @@ func TestAuthRoutes(t *testing.T) {
 		assert.Equal(t, http.StatusUnprocessableEntity, w.Code, w.Body.String())
 	})
 
+	t.Run("test user cannot register with existing email", func(t *testing.T) {
+		firstName := GenerateRandomString(5)
+		lastName := GenerateRandomString(5)
+		email := GenerateRandomEmail()
+		phone := GenerateRandomNumber()
+		password := GenerateRandomString(8)
+
+		registerParamsJSON, _ := json.Marshal(map[string]string{
+			"firstName": firstName,
+			"lastName":  lastName,
+			"email":     email,
+			"phone":     phone,
+			"password":  password,
+		})
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/auth/register", bytes.NewBuffer(registerParamsJSON))
+		req.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(w, req)
+		require.Equal(t, http.StatusCreated, w.Code, w.Body.String())
+
+		w = httptest.NewRecorder()
+		req, _ = http.NewRequest("POST", "/auth/register", bytes.NewBuffer(registerParamsJSON))
+		req.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Code, w.Body.String())
+	})
+
 	t.Run("test user can register successfully", func(t *testing.T) {
 		registerParamsJSON, _ := json.Marshal(map[string]string{
 			"firstName": GenerateRandomString(10),
@@ -161,7 +190,7 @@ func TestAuthRoutes(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/auth/register", bytes.NewBuffer(registerParamsJSON))
 		req.Header.Set("Content-Type", "application/json")
 		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusCreated, w.Code, w.Body.String())
+		require.Equal(t, http.StatusCreated, w.Code, w.Body.String())
 
 		loginParamsJSON, _ := json.Marshal(map[string]string{
 			"email":    email,
