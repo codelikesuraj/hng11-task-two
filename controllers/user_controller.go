@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -26,7 +25,6 @@ func (uc *UserController) RegisterUser(c *gin.Context) {
 	validate := validator.New(validator.WithRequiredStructEnabled())
 
 	if err := c.ShouldBind(&user); err != nil {
-		log.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":     http.StatusText(http.StatusInternalServerError),
 			"message":    err.Error(),
@@ -39,7 +37,6 @@ func (uc *UserController) RegisterUser(c *gin.Context) {
 		ve := err.(validator.ValidationErrors)
 		errors := make([]models.InputError, len(ve))
 		for i, fe := range ve {
-			log.Println(fe)
 			errors[i] = models.InputError{
 				Field:   utils.GetJSONTagValue(user, fe.Field()),
 				Message: utils.GetValidationMessage(fe),
@@ -53,7 +50,6 @@ func (uc *UserController) RegisterUser(c *gin.Context) {
 
 	passwordHash, err := utils.HashPassword(user.Password)
 	if err != nil {
-		log.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":     http.StatusText(http.StatusInternalServerError),
 			"message":    err.Error(),
@@ -71,7 +67,6 @@ func (uc *UserController) RegisterUser(c *gin.Context) {
 	}
 	result := uc.DB.Where("email = ?", newUser.Email).Limit(1).Find(&newUser)
 	if err := result.Error; err != nil {
-		log.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":     http.StatusText(http.StatusInternalServerError),
 			"message":    err.Error(),
@@ -93,7 +88,6 @@ func (uc *UserController) RegisterUser(c *gin.Context) {
 
 	newUser, err = registerUserWithOrg(uc.DB, newUser)
 	if err != nil {
-		log.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":     http.StatusText(http.StatusInternalServerError),
 			"message":    err.Error(),
@@ -104,7 +98,6 @@ func (uc *UserController) RegisterUser(c *gin.Context) {
 
 	token, err := utils.GenerateJWT(newUser)
 	if err != nil {
-		log.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":     http.StatusText(http.StatusInternalServerError),
 			"message":    err.Error(),
@@ -128,7 +121,6 @@ func (uc *UserController) LoginUser(c *gin.Context) {
 	validate := validator.New(validator.WithRequiredStructEnabled())
 
 	if err := c.ShouldBind(&userParam); err != nil {
-		log.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":     http.StatusText(http.StatusInternalServerError),
 			"message":    err.Error(),
@@ -141,7 +133,6 @@ func (uc *UserController) LoginUser(c *gin.Context) {
 		ve := err.(validator.ValidationErrors)
 		errors := make([]models.InputError, len(ve))
 		for i, fe := range ve {
-			log.Println(fe)
 			errors[i] = models.InputError{
 				Field:   utils.GetJSONTagValue(userParam, fe.Field()),
 				Message: utils.GetValidationMessage(fe),
@@ -175,7 +166,6 @@ func (uc *UserController) LoginUser(c *gin.Context) {
 
 	token, err := utils.GenerateJWT(user)
 	if err != nil {
-		log.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":     http.StatusText(http.StatusInternalServerError),
 			"message":    err.Error(),

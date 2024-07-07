@@ -3,7 +3,6 @@ package controllers
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -27,7 +26,6 @@ func (oc *OrganisationController) Create(c *gin.Context) {
 	validate := validator.New(validator.WithRequiredStructEnabled())
 
 	if err := c.ShouldBind(&org); err != nil {
-		log.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":     http.StatusText(http.StatusInternalServerError),
 			"message":    err.Error(),
@@ -40,7 +38,6 @@ func (oc *OrganisationController) Create(c *gin.Context) {
 		ve := err.(validator.ValidationErrors)
 		errors := make([]models.InputError, len(ve))
 		for i, fe := range ve {
-			log.Println(fe)
 			errors[i] = models.InputError{
 				Field:   utils.GetJSONTagValue(org, fe.Field()),
 				Message: utils.GetValidationMessage(fe),
@@ -220,7 +217,6 @@ func (oc *OrganisationController) AddUser(c *gin.Context) {
 	var addUser models.OrganisationUserParams
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	if err := c.ShouldBind(&addUser); err != nil {
-		log.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":     http.StatusText(http.StatusInternalServerError),
 			"message":    err.Error(),
@@ -233,7 +229,6 @@ func (oc *OrganisationController) AddUser(c *gin.Context) {
 		ve := err.(validator.ValidationErrors)
 		errors := make([]models.InputError, len(ve))
 		for i, fe := range ve {
-			log.Println(fe)
 			errors[i] = models.InputError{
 				Field:   utils.GetJSONTagValue(addUser, fe.Field()),
 				Message: utils.GetValidationMessage(fe),
