@@ -29,12 +29,12 @@ func main() {
 
 	router := gin.Default()
 	router.GET("/", controllers.Home)
-	router.GET("/auth", middlewares.Auth(), controllers.Home)
 	router.Group("/auth").
 		POST("/register", UserController.RegisterUser).
 		POST("/login", UserController.LoginUser)
 	router.Group("/api", middlewares.Auth()).
 		GET("/users/:id", UserController.GetUserById).
+		GET("/organisations/:orgId", OrganisationController.GetOrganisationById).
 		GET("/organisations", OrganisationController.GetAll).
 		POST("/organisations", OrganisationController.Create)
 	router.Run(":" + os.Getenv("PORT"))
