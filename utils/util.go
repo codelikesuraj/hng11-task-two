@@ -2,7 +2,6 @@ package utils
 
 import (
 	"errors"
-	"log"
 	"os"
 	"reflect"
 	"strings"
@@ -12,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -73,13 +71,6 @@ func GetJSONTagValue(v interface{}, fieldName string) string {
 	}
 
 	return field.Tag.Get("json")
-}
-
-func LoadEnvs() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
 }
 
 func GenerateJWT(user models.User) (string, error) {

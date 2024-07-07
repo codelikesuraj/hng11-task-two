@@ -9,10 +9,11 @@ import (
 	"github.com/codelikesuraj/hng11-task-two/models"
 	"github.com/codelikesuraj/hng11-task-two/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func init() {
-	utils.LoadEnvs()
+	godotenv.Load()
 }
 
 func main() {
