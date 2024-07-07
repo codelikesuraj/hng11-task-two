@@ -29,8 +29,6 @@ func GetDBConnection() (*gorm.DB, error) {
 
 func GetValidationMessage(fe validator.FieldError) string {
 	switch fe.Tag() {
-	case "alpha":
-		return "field must be only contain alphabets"
 	case "email":
 		return "invalid email"
 	case "required":

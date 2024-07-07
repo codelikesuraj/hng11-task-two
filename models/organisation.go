@@ -16,8 +16,8 @@ type Organisation struct {
 }
 
 type OrganisationCreateParams struct {
-	Name        string `json:"name" validate:"required,alpha,min=2,max=32"`
-	Description string `json:"description" validate:"omitempty,alpha,min=2,max=32"`
+	Name        string `json:"name" validate:"required,min=1,max=64"`
+	Description string `json:"description" validate:"omitempty,min=1,max=64"`
 }
 
 type OrganisationUserParams struct {

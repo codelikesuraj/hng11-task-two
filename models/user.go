@@ -18,16 +18,16 @@ type User struct {
 }
 
 type UserRegisterParams struct {
-	FirstName string `json:"firstName" validate:"required,alpha,min=2,max=32"`
-	LastName  string `json:"lastName" validate:"required,alpha,min=2,max=32"`
+	FirstName string `json:"firstName" validate:"required,min=1,max=64"`
+	LastName  string `json:"lastName" validate:"required,min=1,max=64"`
 	Email     string `json:"email" validate:"required,email"`
-	Password  string `json:"password" validate:"required,min=8,max=32"`
-	Phone     string `json:"phone" validate:"required,len=11"`
+	Password  string `json:"password" validate:"required,min=1,max=64"`
+	Phone     string `json:"phone" validate:"required,min=1"`
 }
 
 type UserLoginParams struct {
 	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=8,max=32"`
+	Password string `json:"password" validate:"required,min=1,max=64"`
 }
 
 func UserResponse(user User) map[string]string {
