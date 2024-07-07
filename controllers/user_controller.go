@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -61,18 +62,15 @@ func (uc *UserController) RegisterUser(c *gin.Context) {
 		return
 	}
 
-	newOrganisation := models.Organisation{
-		Name: user.FirstName + "'s Organisation",
-		User: models.User{
-			FirstName: user.FirstName,
-			LastName:  user.LastName,
-			Email:     user.Email,
-			Password:  passwordHash,
-			Phone:     user.Phone,
-		},
+	newUser := models.User{
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Email:     user.Email,
+		Password:  passwordHash,
+		Phone:     user.Phone,
 	}
-
-	if err = uc.DB.Create(&newOrganisation).Error; err != nil {
+	result := uc.DB.Where("email = ?", newUser.Email).Limit(1).Find(&newUser)
+	if err := result.Error; err != nil {
 		log.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":     http.StatusText(http.StatusInternalServerError),
@@ -81,8 +79,28 @@ func (uc *UserController) RegisterUser(c *gin.Context) {
 		})
 		return
 	}
+	if result.RowsAffected > 0 {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"errors": []gin.H{
+				{
+					"field":   "email",
+					"message": "email already exists",
+				},
+			},
+		})
+		return
+	}
 
-	newUser := newOrganisation.User
+	newUser, err = registerUserWithOrg(uc.DB, newUser)
+	if err != nil {
+		log.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":     http.StatusText(http.StatusInternalServerError),
+			"message":    err.Error(),
+			"statusCode": http.StatusInternalServerError,
+		})
+		return
+	}
 
 	token, err := utils.GenerateJWT(newUser)
 	if err != nil {
@@ -97,7 +115,7 @@ func (uc *UserController) RegisterUser(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{
 		"status":  "success",
-		"message": "registration successful",
+		"message": "Registration successful",
 		"data": gin.H{
 			"accessToken": token,
 			"user":        models.UserResponse(newUser),
@@ -148,8 +166,8 @@ func (uc *UserController) LoginUser(c *gin.Context) {
 
 	if result.RowsAffected < 1 || !utils.PasswordIsValid(user.Password, userParam.Password) {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"status":     "bad request",
-			"message":    "authentication failed",
+			"status":     "Bad request",
+			"message":    "Authentication failed",
 			"statusCode": http.StatusUnauthorized,
 		})
 		return
@@ -168,10 +186,10 @@ func (uc *UserController) LoginUser(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
-		"message": "login successful",
+		"message": "Login successful",
 		"data": gin.H{
 			"accessToken": token,
-			"users":       models.UserResponse(user),
+			"user":        models.UserResponse(user),
 		},
 	})
 }
@@ -190,8 +208,29 @@ func (uc *UserController) GetUserById(c *gin.Context) {
 	var user models.User
 	user.ID = uint(userId)
 
+	tokenString, _ := utils.GetJWTFromRequest(c)
+	_, err := utils.GetUserFromJWT(tokenString)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"status":     http.StatusText(http.StatusUnauthorized),
+			"message":    http.StatusText(http.StatusUnauthorized),
+			"statusCode": http.StatusUnauthorized,
+		})
+		return
+	}
+
+	// userJWTId, _ := strconv.ParseUint(userJWT["userId"].(string), 10, 64)
+	// if uint(userJWTId) != user.ID {
+	// 	c.JSON(http.StatusUnauthorized, gin.H{
+	// 		"status":     http.StatusText(http.StatusUnauthorized),
+	// 		"message":    http.StatusText(http.StatusUnauthorized),
+	// 		"statusCode": http.StatusUnauthorized,
+	// 	})
+	// 	return
+	// }
+
 	result := uc.DB.Limit(1).Find(&user)
-	if result.RowsAffected != 1 || result.Error != nil {
+	if result.RowsAffected < 1 || result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"status":     http.StatusText(http.StatusNotFound),
 			"message":    "user not found",
@@ -205,4 +244,31 @@ func (uc *UserController) GetUserById(c *gin.Context) {
 		"message": "user found",
 		"data":    models.UserResponse(user),
 	})
+}
+
+func registerUserWithOrg(db *gorm.DB, user models.User) (models.User, error) {
+	err := db.Transaction(func(tx *gorm.DB) error {
+		// create user
+		if err := tx.Create(&user).Error; err != nil {
+			return err
+		}
+
+		// create organisation
+		org := models.Organisation{
+			Name:        fmt.Sprintf("%s's Organisation", user.FirstName),
+			CreatedByID: user.ID,
+		}
+		if err := tx.Create(&org).Error; err != nil {
+			return err
+		}
+
+		// add user to organisation
+		if err := tx.Model(&org).Association("Users").Append(&user); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return user, err
 }

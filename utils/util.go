@@ -5,9 +5,11 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/codelikesuraj/hng11-task-two/models"
+	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/joho/godotenv"
@@ -84,7 +86,7 @@ func GenerateJWT(user models.User) (string, error) {
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":   user.ID,
 		"user": models.UserResponse(user),
-		"exp":  time.Now().Add(time.Hour * 24).Unix(),
+		"exp":  time.Now().Add(time.Hour).Unix(),
 	}).SignedString([]byte(os.Getenv("JWT_SECRET")))
 }
 
@@ -96,11 +98,13 @@ func CheckJWT(tokenString string) error {
 		}
 		return []byte(os.Getenv("JWT_SECRET")), nil
 	})
-
-	claims, ok := token.Claims.(jwt.MapClaims)
+	if err != nil {
+		return errors.New("invalid token")
+	}
 
 	// check token validity
-	if !ok || !token.Valid || err != nil {
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
 		return errors.New("invalid token")
 	}
 
@@ -110,4 +114,33 @@ func CheckJWT(tokenString string) error {
 	}
 
 	return nil
+}
+
+func GetUserFromJWT(tokenString string) (map[string]interface{}, error) {
+	err := CheckJWT(tokenString)
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	token, _ := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	})
+
+	claims, _ := token.Claims.(jwt.MapClaims)
+	return claims["user"].(map[string]interface{}), nil
+}
+
+func GetJWTFromRequest(c *gin.Context) (string, error) {
+	authHeader := c.GetHeader("Authorization")
+
+	if authHeader == "" {
+		return "", errors.New("authorization header is missing")
+	}
+
+	authToken := strings.Split(authHeader, " ")
+	if len(authToken) != 2 || authToken[0] != "Bearer" {
+		return "", errors.New("authorization header is missing")
+	}
+
+	return authToken[1], nil
 }

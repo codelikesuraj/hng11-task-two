@@ -8,12 +8,13 @@ import (
 
 type User struct {
 	gorm.Model
-	FirstName     string
-	LastName      string
-	Email         string `gorm:"unique"`
-	Password      string
-	Phone         string
-	Organisations []*Organisation `gorm:"many2many:user_organistaions;"`
+	FirstName            string
+	LastName             string
+	Email                string `gorm:"unique"`
+	Password             string `json:"-"`
+	Phone                string
+	CreatedOrganisations []Organisation `gorm:"foreignKey:CreatedByID"`
+	Organisations        []Organisation `gorm:"many2many:users_organisations"`
 }
 
 type UserRegisterParams struct {

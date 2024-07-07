@@ -21,17 +21,19 @@ func main() {
 	if err != nil {
 		log.Fatal("error connecting to database:", err)
 	}
-	db.AutoMigrate(models.User{}, &models.Organisation{})
+	db.AutoMigrate(&models.Organisation{}, models.User{})
 
-	router := gin.Default()
-
+	OrganisationController := controllers.NewOrganisationController(db)
 	UserController := controllers.NewUserController(db)
 
+	router := gin.Default()
 	router.GET("/", controllers.Home)
 	router.GET("/auth", middlewares.Auth(), controllers.Home)
-	router.POST("/auth/register", UserController.RegisterUser)
-	router.POST("/auth/login", UserController.LoginUser)
-	router.GET("/api/users/:id", middlewares.Auth(), UserController.GetUserById)
-
+	router.Group("/auth").
+		POST("/register", UserController.RegisterUser).
+		POST("/login", UserController.LoginUser)
+	router.Group("/api", middlewares.Auth()).
+		GET("/users/:id", UserController.GetUserById).
+		GET("/organisations", OrganisationController.GetAll)
 	router.Run(":" + os.Getenv("PORT"))
 }
